@@ -1,0 +1,49 @@
+---
+- name: install epel-release
+  yum: name=epel-release state=present
+
+- name: add remi-repo
+  command: rpm -ih http://rpms.famillecollet.com/enterprise/remi-release-7.rpm creates=/etc/yum.repos.d/remi.repo
+
+- name: install php7.2
+  yum: name={{ item }} enablerepo=remi,remi-php72 state=present
+  with_items:
+    - php
+    - php-gd
+    - php-xml
+    - php-pecl-imagick
+    - php-pecl-memcached
+    - php-pecl-zip
+    - php-mysqlnd
+    - php-mbstring
+    - php-openssl
+    - php-fpm
+
+- name: stat php.ini.bk
+  stat:
+    path: /etc/php.ini.bk
+    get_checksum: false
+    get_md5: false
+  register: file_stat
+
+- name: backup php.ini
+  copy: src=/etc/php.ini dest=/etc/php.ini.bk
+  when: file_stat.stat.exists == false
+
+- name: setting php.ini
+  template:
+    src: php.ini.j2
+    dest: /etc/php.ini
+  when: file_stat.stat.exists == false
+
+- name: set php-fpm conf
+  shell: |
+    sed -i -e 's/^user = .*$/user = nginx/g' /etc/php-fpm.d/www.conf
+    sed -i -e 's/^group = .*$/group = nginx/g' /etc/php-fpm.d/www.conf
+    sed -i -e 's/^;listen.owner = .*$/listen.owner = nginx/g' /etc/php-fpm.d/www.conf
+    sed -i -e 's/^;listen.group = .*$/listen.group = nginx/g' /etc/php-fpm.d/www.conf
+    sed -i -e 's/^listen = .*$/listen = \/var\/run\/php-fpm\/php-fpm.sock/g' /etc/php-fpm.d/www.conf
+
+
+- name: start php-fpm
+  service: name=php-fpm state=started enabled=yes

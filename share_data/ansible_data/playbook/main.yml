@@ -1,0 +1,10 @@
+---
+- hosts: localhost
+  user: root
+  become: yes
+  roles:
+    - ../roles/git
+    - ../roles/unzip
+    - ../roles/nginx
+    - ../roles/php7
+    - ../roles/mysql
